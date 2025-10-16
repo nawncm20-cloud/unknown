@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>나의 소개</title>
+  <style>
+    /* 리셋 및 기본 스타일 */
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: "Pretendard", "Noto Sans KR", system-ui, -apple-system, sans-serif;
+      color: #f5f7fa;
+      background: #0b1220; /* fallback 배경 */
+      overflow: hidden; /* 3D 캔버스 스크롤 방지 */
+    }
+
+    /* Three.js 캔버스가 뒤에 깔리도록 */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    /* 오버레이 컨테이너 */
+    .container {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      backdrop-filter: blur(2px);
+    }
+
+    /* 카드 스타일 */
+    .card {
+      width: 100%;
+      max-width: 980px;
+      background: rgba(14, 20, 35, 0.6);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(120deg, rgba(34,83,120,0.25), rgba(84,52,146,0.25));
+    }
+
+    .avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #8eaaff, #6638d9);
+      border: 2px solid rgba(255,255,255,0.2);
+      flex-shrink: 0;
+    }
+
+    .title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .name {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+    .tagline {
+      font-size: 14px;
+      color: #c9d4e2;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      padding: 28px 32px;
+    }
+
+    @media (min-width: 900px) {
+      .content {
+        grid-template-columns: 1.2fr 0.8fr;
+      }
+    }
+
+    /* 섹션 공통 */
+    .section {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .section h2 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .section p {
+      margin: 0;
+      line-height: 1.7;
+      color: #dbe5f2;
+    }
+
+    /* 리스트 스타일 */
+    .list {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .item .label { font-weight: 600; }
+    .item .value { color: #c9d4e2; }
+
+    /* 프로젝트 카드 */
+    .projects {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    @media (min-width: 700px) {
+      .projects {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    .project {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 14px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .project:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+    }
+    .project h3 {
+      margin: 0 0 6px 0;
+      font-size: 16px;
+    }
+    .project p {
+      margin: 0;
+      font-size: 14px;
+      color: #c9d4e2;
+      line-height: 1.6;
+    }
+
+    /* 푸터/소셜 */
+    .footer {
+      padding: 16px 32px 28px 32px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(14, 20, 35, 0.4);
+    }
+    .links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      color: #eaf0f7;
+      text-decoration: none;
+      font-size: 14px;
+      transition: background 0.2s ease;
+    }
+    .link:hover { background: rgba(255,255,255,0.1); }
+
+    /* 접근성용 숨김 텍스트 */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <main class="container" role="main">
+    <article class="card" aria-label="소개 카드">
+      <header class="header">
+        <div class="avatar" aria-hidden="true"></div>
+        <div class="title-group">
+          <div class="name">홍길동</div>
+          <div class="tagline">프론트엔드 개발자 · 사용자 경험을 사랑하는 메이커</div>
+        </div>
+      </header>
+
+      <section class="content">
+        <!-- 왼쪽: 소개 + 프로젝트 -->
+        <div class="left">
+          <section class="section" aria-labelledby="intro-title">
+            <h2 id="intro-title">소개</h2>
+            <p>
+              안녕하세요! 저는 인터랙티브 웹 경험을 만드는 것을 좋아하는 프론트엔드 개발자입니다.
+              성능과 접근성을 고려한 클린 코드, 그리고 사용자의 문제를 해결하는 실용적인 디자인을 지향합니다.
+            </p>
+            <div class="list" style="margin-top: 14px;">
+              <div class="item">
+                <span class="label">관심사</span>
+                <span class="value">WebGL, 모션디자인, 성능 최적화</span>
+              </div>
+              <div class="item">
+                <span class="label">현재</span>
+                <span class="value">리액트 기반 UI/UX 개선 프로젝트 진행 중</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" aria-labelledby="projects-title">
+            <h2 id="projects-title">프로젝트</h2>
+            <div class="projects">
+              <article class="project">
+                <h3>인터랙티브 랜딩 페이지</h3>
+                <p>Three.js를 활용한 실시간 파티클 배경과 성능 최적화로 이탈률을 18% 감소.</p>
+              </article>
+              <article class="project">
+                <h3>디자인 시스템 구축</h3>
+                <p>재사용 가능한 컴포넌트와 토큰을 정립하여 개발 속도를 30% 향상.</p>
+              </article>
+              <article class="project">
+                <h3>데이터 시각화 대시보드</h3>
+                <p>반응형 차트와 접근성 준수로 다양한 사용자 환경 지원.</p>
+              </article>
+              <article class="project">
+                <h3>PWA 오프라인 지원</h3>
+                <p>서비스 워커 기반 캐시 전략으로 오프라인 기능 제공.</p>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <!-- 오른쪽: 기술 + 연락처 -->
+        <div class="right">
+          <section class="section" aria-labelledby="skills-title">
+            <h2 id="skills-title">기술</h2>
+            <div class="list">
+              <div class="item">
+                <span class="label">언어</span>
+                <span class="value">JavaScript (ES6+), TypeScript</span>
+              </div>
+              <div class="item">
+                <span class="label">프레임워크</span>
+                <span class="value">React, Next.js, Vue</span>
+              </div>
+              <div class="item">
+                <span class="label">스타일링</span>
+                <span class="value">CSS Modules, Tailwind, Framer Motion</span>
+              </div>
+              <div class="item">
+                <span class="label">툴</span>
+                <span class="value">Vite, Webpack, Git, Figma</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" aria-labelledby="contact-title">
+            <h2 id="contact-title">연락처</h2>
+            <div class="list">
+              <div class="item">
+                <span class="label">이메일</span>
+                <span class="value">me@example.com</span>
+              </div>
+              <div class="item">
+                <span class="label">웹사이트</span>
+                <span class="value"><a class="link" href="https://example.com" target="_blank" rel="noopener">example.com</a></span>
+              </div>
+              <div class="item">
+                <span class="label">GitHub</span>
+                <span class="value"><a class="link" href="https://github.com/username" target="_blank" rel="noopener">@username</a></span>
+              </div>
+              <div class="item">
+                <span class="label">LinkedIn</span>
+                <span class="value"><a class="link" href="https://linkedin.com/in/username" target="_blank" rel="noopener">/in/username</a></span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div>© 2025 홍길동. All rights reserved.</div>
+        <div class="links">
+          <a class="link" href="#intro-title">소개</a>
+          <a class="link" href="#projects-title">프로젝트</a>
+          <a class="link" href="#skills-title">기술</a>
+          <a class="link" href="#contact-title">연락처</a>
+        </div>
+      </footer>
+    </article>
+  </main>
+
+  <!-- Three.js 3D 배경 스크립트 -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+  <script>
+    // 기본 설정
+    const canvas = document.getElementById('bg-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const scene = new THREE.Scene();
+
+    // 은은한 그라디언트 배경 색
+    const bgColorTop = new THREE.Color(0x0b1220);
+    const bgColorBottom = new THREE.Color(0x1b2850);
+    scene.background = bgColorTop.clone();
+
+    // 카메라
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 50);
+
+    // 조명
+    const hemiLight = new THREE.HemisphereLight(0x88aaff, 0x202040, 0.6);
+    scene.add(hemiLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight.position.set(10, 10, 10);
+    scene.add(dirLight);
+
+    // 파티클 생성
+    const particleCount = 1200;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const scales = new Float32Array(particleCount);
+
+    for (let i = 0; i < particleCount; i++) {
+      const i3 = i * 3;
+      // 원형 도넛 형태로 분포
+      const radius = 20 + Math.random() * 18;
+      const angle = Math.random() * Math.PI * 2;
+      const height = (Math.random() - 0.5) * 16;
+      positions[i3] = Math.cos(angle) * radius;
+      positions[i3 + 1] = height;
+      positions[i3 + 2] = Math.sin(angle) * radius;
+
+      scales[i] = Math.random() * 1.5 + 0.5;
+    }
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('aScale', new THREE.BufferAttribute(scales, 1));
+
+    // 파티클 머티리얼 (ShaderMaterial로 반짝임/색 변화)
+    const material = new THREE.ShaderMaterial({
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      uniforms: {
+        uTime: { value: 0 },
+        uColor1: { value: new THREE.Color(0x7aa2ff) },
+        uColor2: { value: new THREE.Color(0xb18cff) },
+      },
+      vertexShader: `
+        attribute float aScale;
+        uniform float uTime;
+        varying float vScale;
+        varying float vPulse;
+
+        void main() {
+          vScale = aScale;
+          // 부드러운 원 궤도 회전
+          float angle = uTime * 0.06;
+          mat3 rotY = mat3(
+            cos(angle), 0.0, -sin(angle),
+            0.0,        1.0,  0.0,
+            sin(angle), 0.0,  cos(angle)
+          );
+
+          vec3 pos = (rotY * position);
+
+          // 미세한 파동
+          float wave = sin(uTime * 0.8 + pos.y * 0.25) * 0.6;
+          pos += vec3(0.0, wave, 0.0);
+
+          vPulse = sin(uTime * 1.6 + pos.x * 0.2) * 0.5 + 0.5;
+
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+          // 점 크기
+          gl_PointSize = (vScale * 2.5) * (300.0 / -mvPosition.z);
+        }
+      `.replace('mvPosition', 'modelViewMatrix * vec4(pos, 1.0)'),
+      fragmentShader: `
+        precision highp float;
+        uniform vec3 uColor1;
+        uniform vec3 uColor2;
+        varying float vScale;
+        varying float vPulse;
+
+        void main() {
+          // 원형 포인트 스프라이트
+          vec2 uv = gl_PointCoord * 2.0 - 1.0;
+          float d = dot(uv, uv);
+          if (d > 1.0) discard;
+
+          // 가장자리 부드럽게
+          float alpha = smoothstep(1.0, 0.6, d);
+
+          // 색 혼합 + 펄스
+          vec3 color = mix(uColor1, uColor2, vPulse);
+
+          gl_FragColor = vec4(color, alpha);
+        }
+      `
+    });
+
+    const points = new THREE.Points(geometry, material);
+    scene.add(points);
+
+    // 천천히 배경색 페이드
+    let t = 0;
+    function updateBackground(delta) {
+      t += delta * 0.02;
+      const mixVal = (Math.sin(t) * 0.5 + 0.5) * 0.3; // 0~0.3 사이
+      const mixed = bgColorTop.clone().lerp(bgColorBottom, mixVal);
+      scene.background = mixed;
+    }
+
+    // 마우스 파랄랙스
+    const mouse = { x: 0, y: 0 };
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = (e.clientY / window.innerHeight) * 2 - 1;
+    });
+
+    // 리사이즈
+    window.addEventListener('resize', onResize);
+    function onResize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+
+    // 애니메이션 루프
+    let last = performance.now();
+    function animate(now) {
+      const delta = (now - last) / 1000;
+      last = now;
+
+      material.uniforms.uTime.value += delta;
+
+      // 카메라 미세한 파랄랙스
+      camera.position.x += (mouse.x * 2 - camera.position.x) * 0.05;
+      camera.position.y += (-mouse.y * 1.5 - camera.position.y) * 0.05;
+      camera.lookAt(0, 0, 0);
+
+      updateBackground(delta);
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+
+    // 성능 고려: 페이지가 숨겨질 때 렌더 중단
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) renderer.setAnimationLoop(null);
+      else requestAnimationFrame(animate);
+    });
+  </script>
+</body>
+</html>
